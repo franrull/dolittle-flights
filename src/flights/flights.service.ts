@@ -15,7 +15,9 @@ export class FlightsService {
   constructor(
     private readonly httpService: HttpService,
     private prisma: PrismaService
-  ) {}
+  ) {
+    this.fetchFlightsAndEvents();
+  }
 
   getFlightsByAirport(airportCode: string): Promise<Flight[]> {
     return this.prisma.flight.findMany({
