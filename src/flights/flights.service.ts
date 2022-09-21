@@ -1,11 +1,12 @@
 import { combineLatest, from, map, mergeAll, of } from "rxjs";
 import { HttpService } from "@nestjs/axios";
 import { Injectable } from "@nestjs/common";
-import { Cron } from "@nestjs/schedule";
+import { Cron, CronExpression } from "@nestjs/schedule";
 import { Flight } from "@prisma/client";
 
 import airports from "./airports";
 import { PrismaService } from "src/prisma/prisma.service";
+import { Console } from "console";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const convert = require("xml-js");
@@ -35,16 +36,17 @@ export class FlightsService {
 
   @Cron("0 */3 * * * *")
   fetchFlightsAndEvents(): void {
+    const endpoint = `https://flydata.avinor.no/XmlFeed.asp?TimeFrom=1&TimeTo=24`;
+
+    const date = new Date(Date.now() - 1000 * 60 * 3); // 3 minutes ago
+    const formattedDate = date.toISOString().split(".")[0] + "Z";
+
     from(airports)
       .pipe(
         map((airport) => {
-          // Fetch all flights that were updated in the last 3 minutes (strip miliseconds)
-          const date =
-            new Date(Date.now() - 1000 * 60 * 3).toISOString().split(".")[0] +
-            "Z";
-          const flights = this.httpService.get<string>(
-            `https://flydata.avinor.no/XmlFeed.asp?TimeFrom=1&TimeTo=24&airport=${airport.code.toUpperCase()}&lastUpdate=${date}`
-          );
+          // Fetch all flights for {airport} that were updated since {date}
+          const requestURL = `${endpoint}&airport=${airport.code.toUpperCase()}&lastUpdate=${formattedDate}`;
+          const flights = this.httpService.get<string>(requestURL);
           return combineLatest({ airport: of(airport), flights });
         }),
         mergeAll()
@@ -53,7 +55,12 @@ export class FlightsService {
         const data = JSON.parse(
           convert.xml2json(flights.data, { compact: true, spaces: 2 })
         );
-        if (Array.isArray(data?.airport?.flights?.flight))
+        if (Array.isArray(data?.airport?.flights?.flight)) {
+          console.log(
+            `Found ${data.airport.flights.flight.length} flight events for ${
+              airport.name
+            } (${airport.code.toUpperCase()})`
+          );
           for (const flight of data.airport.flights.flight) {
             const {
               flight_id: { _text: flight_id },
@@ -71,7 +78,7 @@ export class FlightsService {
                   },
                 }))
               ) {
-                const flight = await this.prisma.flight.create({
+                await this.prisma.flight.create({
                   data: {
                     airport: airport.code,
                     schedule_time,
@@ -81,7 +88,6 @@ export class FlightsService {
                     arr_dep_airport,
                   },
                 });
-                console.log(flight);
               }
             } catch (error) {
               console.error("error saving flight", error);
@@ -103,15 +109,15 @@ export class FlightsService {
                   },
                 }))
               ) {
-                const statusEvent = await this.prisma.flightStatusEvent.create({
+                await this.prisma.flightStatusEvent.create({
                   data: eventPayload,
                 });
-                console.log(statusEvent);
               }
             } catch (error) {
               console.error("error saving status event", error);
             }
           }
+        }
       });
   }
 }
