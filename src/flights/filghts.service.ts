@@ -1,11 +1,11 @@
+import { combineLatest, from, map, mergeAll, of } from "rxjs";
 import { HttpService } from "@nestjs/axios";
 import { Injectable } from "@nestjs/common";
-import { Cron, CronExpression } from "@nestjs/schedule";
-import { combineLatest, from, map, mergeAll, of } from "rxjs";
+import { Cron } from "@nestjs/schedule";
+import { Flight } from "@prisma/client";
 
 import airports from "./airports";
-import { PrismaService } from "src/prisma.ts/prisma.service";
-import { Flight } from "@prisma/client";
+import { PrismaService } from "src/prisma/prisma.service";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const convert = require("xml-js");

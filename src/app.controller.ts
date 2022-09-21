@@ -7,7 +7,9 @@ export class AppController {
   constructor(
     private readonly appService: AppService,
     private readonly flightsService: FlightsService
-  ) {}
+  ) {
+    flightsService.fetchFlightsAndEvents();
+  }
 
   @Get()
   getHello(): string {

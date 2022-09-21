@@ -4,7 +4,7 @@ import { ScheduleModule } from "@nestjs/schedule";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { FlightsService } from "./flights/filghts.service";
-import { PrismaService } from "./prisma.ts/prisma.service";
+import { PrismaService } from "./prisma/prisma.service";
 
 @Module({
   imports: [HttpModule, ScheduleModule.forRoot()],
